@@ -273,3 +273,117 @@ GRANT ALL ON emps.* TO 'xiao'@'%';
 
 # 撤销 'xiao'@'%' 用户的 emps 数据库的所有权限
 REVOKE ALL ON emps.* FROM 'xiao'@'%';
+
+--
+--
+--
+# 函数
+# CONCAT: 拼接字符串
+SELECT CONCAT('HELLO','MySQL');
+
+# LOWER: 全部转小写
+SELECT LOWER('Hello');
+
+# UPPER: 全部转大写
+SELECT UPPER('Hello');
+
+# LPAD: 左填充(---01)
+SELECT LPAD('01',5,'-');
+
+# RPAD: 右填充
+SELECT RPAD('01',5,'-');
+
+# TRIM: 去除空格
+SELECT TRIM(' 1 Hello MySQL 1');
+
+# SUBSTRING: 截取子字符串
+SELECT SUBSTRING('Hello MySQL',1,5);
+--
+# 工号统一为5位数，目前不足5位数的全部在前面补0。比如：1号员工工号应为00001
+UPDATE emps SET workno = LPAD(workno,5,'0');
+SELECT workno FROM emps;
+
+
+# CEIL: 向上取整(1.1 -> 2)
+SELECT CEIL(1.1);
+
+# FLOOR: 向下取整(1.9 -> 1)
+SELECT FLOOR(1.9);
+
+# MOD: 取模 (7,4 -> 3)
+SELECT MOD(7,4);
+
+# RAND: 获取随机数
+SELECT RAND();
+
+# ROUND: 四舍五入
+SELECT ROUND(2.344,2);
+
+# 通过数据库的函数，生成一个六位数的随机验证码。
+-- 获取随机数可以通过rand()函数，但是获取出来的随机数是在0-1之间的，所以可以在其基础上乘以1000000，然后舍弃小数部分，如果长度不足6位，补0
+SELECT LPAD(ROUND(RAND()*1000000, 0), 6,'0');
+
+# CURDATE: 当前日期
+SELECT CURDATE();
+
+# CURTIME: 当前时间
+SELECT CURTIME();
+
+# NOW: 当前日期和时间
+SELECT NOW();
+
+# YEAR , MONTH , DAY: 当前年、月、日
+SELECT YEAR(NOW());
+SELECT MONTH(NOW());
+SELECT DAY(NOW());
+
+# DATE_ADD: 增加指定的时间间隔
+SELECT DATE_ADD(NOW(),INTERVAL 70 YEAR);
+
+# DATEDIFF: 获取两个日期相差的天数
+SELECT DATEDIFF('2019-09-01','2024-09-26');
+
+# 查询所有员工的入职天数，并根据入职天数倒序排序。
+-- 入职天数，通过当前日期-入职日期，用datediff函数来完成。
+SELECT name, DATEDIFF(CURDATE(), entrydate) entryDay FROM emps ORDER BY entryDay DESC;
+
+# IF 如果value为true，则返回t，否则返回f
+SELECT IF(FALSE, 'OK','ERROR');
+
+# IFNULL 如果value1不为空，返回value1，否则返回value2
+SELECT IFNULL('OK','DEFAULT');
+SELECT IFNULL('','DEFAULT');
+SELECT IFNULL(NULL,'DEFAULT');
+
+# CASE WHEN THEN ELSE END
+-- 查询emps表的员工姓名和工作地址（北京/上海 -》一线城市，其它 -》二线城市）
+SELECT name, CASE workaddress WHEN '北京' THEN '一线城市' WHEN '上海' THEN '一线城市' ELSE '二线城市' END FROM emps;
+
+--
+# 数据准备
+CREATE TABLE score(
+       id int COMMENT 'ID',
+       name varchar(20) COMMENT '姓名',
+       math int COMMENT '数学',
+       english int COMMENT '英语',
+       chinese int COMMENT '语文'
+   ) COMMENT '学员成绩表';
+INSERT INTO score(id, name, math, english, chinese) VALUES (1, 'Tom', 67, 88, 95), (2, 'Rose' , 23, 66, 90),(3, 'Jack', 56, 98, 76);
+
+# 分数 >=85 优秀，>=60 及格，其它不及格
+SELECT name, 
+(CASE WHEN math >= 85 THEN '优秀' WHEN math >= 60 THEN '及格' ELSE '不及格' END) '数学',
+(CASE WHEN english >= 85 THEN '优秀' WHEN english >= 60 THEN '及格' ELSE '不及格' END) '英语',
+(CASE WHEN chinese >= 85 THEN '优秀' WHEN chinese >= 60 THEN '及格' ELSE '不及格' END) '语文'
+FROM score;
+
+-- 数据库中，存储的是入职日期，如2000-01-01，快速计算出入职天数  DATEDIFF
+SELECT `name`, DATEDIFF(CURDATE(), entrydate) FROM emps;
+
+-- 数据库中，存储的是学生的分数值，如98、75，快速判定分数的等级 CASE ... WHEN ...
+SELECT name, 
+(CASE WHEN math >= 98 THEN '优秀' WHEN math >= 75 THEN '及格' ELSE '良好' END) '数学',
+(CASE WHEN english >= 98 THEN '优秀' WHEN english >= 75 THEN '及格' ELSE '良好' END) '英语',
+(CASE WHEN chinese >= 98 THEN '优秀' WHEN chinese >= 75 THEN '及格' ELSE '良好' END) '语文'
+FROM score;
+
