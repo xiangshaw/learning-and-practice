@@ -350,7 +350,7 @@ DML英文全称是Data Manipulation Language(数据操作语言)，用来对数�
 - 修改数据（UPDATE） 
 - 删除数据（DELETE）
 
-##### 2.4.1 添加数据
+#### 2.4.1 添加数据
 
 ① 给指定字段添加数据
 
@@ -398,7 +398,7 @@ INSERT INTO 表名(字段名1,字段名2,...) VALUES(值1,值2,...),(值1,值2,.
 > - `字符串和日期型数据应该包含在引号中`
 > - 插入数据大小应在字段规定范围内
 
-##### 2.4.2 修改数据
+#### 2.4.2 修改数据
 
 ```mysql
 UPDATE 表名 SET 字段名1 = 值1, 字段名2 = 值2,...[WHERE 条件];
@@ -424,7 +424,7 @@ UPDATE 表名 SET 字段名1 = 值1, 字段名2 = 值2,...[WHERE 条件];
 >
 > - 修改语句未添加条件会修改整张表数据
 
-##### 2.4.3 删除数据
+#### 2.4.3 删除数据
 
 ```mysql
 DELETE FROM 表名 [WHERE 条件];
@@ -446,7 +446,7 @@ DELETE FROM 表名 [WHERE 条件];
 > - 不能删除某一个字段的值（可以使用UPDATE将字段设置为NULL）
 > - 全表删除需谨慎
 
-#### 2.5 DQL
+### 2.5 DQL
 
 DQL英文全称是Data Query Language(数据查询语言)，数据查询语言，用来查询数据库中表的记录。
 
@@ -491,7 +491,7 @@ DQL英文全称是Data Query Language(数据查询语言)，数据查询语言�
 >INSERT INTO emps (id, workno, name, gender, age, idcard, workaddress, entrydate) VALUES (16, '00016', '周芷若', '女', 18, null, '北京', '2012-06-01');
 >```
 
-##### 2.5.1 基本语法
+#### 2.5.1 基本语法
 
 ```mysql
 SELECT
@@ -517,7 +517,7 @@ LIMIT
 >排序查询（order by） 
 >分页查询（limit）
 
-##### 2.5.2 基本查询
+#### 2.5.2 基本查询
 
 不带条件查询
 
@@ -581,7 +581,7 @@ SELECT DISTINCT 字段列表 FROM 表名;
 >   SELECT DISTINCT workaddress '工作地址' FROM emps;
 >   ```
 
-##### 2.5.3 条件查询
+#### 2.5.3 条件查询
 
 语法：
 
@@ -689,7 +689,7 @@ SELECT DISTINCT 字段列表 FROM 表名;
 >   SELECT * FROM emps WHERE idcard LIKE '_________________X';
 >   ```
 
-##### 2.5.4 聚合函数
+#### 2.5.4 聚合函数
 
 > 将一列数据作为一个整体，进行纵向计算。
 
@@ -751,7 +751,7 @@ SELECT 聚合函数(字段列表) FROM 表名;
 >   SELECT SUM(age) FROM emps WHERE workaddress = '西安';
 >   ```
 
-##### 2.5.5 分组查询
+#### 2.5.5 分组查询
 
 ```mysql
 SELECT 字段列表 FROM 表名 [WHERE 条件] GROUP BY 分组字段名 [HAVING 分组后过滤条件];
@@ -793,7 +793,7 @@ WHERE 与 HAVING 区别
 >   SELECT workaddress,gender,COUNT(*) '数量' FROM emps GROUP BY workaddress,gender;
 >   ```
 
-##### 2.5.6 排序查询
+#### 2.5.6 排序查询
 
 升序排序（ASC 默认）、降序排序（DESC）
 
@@ -826,7 +826,7 @@ SELECT 字段列表 FROM 表名 ORDER BY 字段1 排序方式1, 字段2 排序�
 >   SELECT * FROM emps ORDER BY age ASC, entrydate DESC;
 >   ```
 
-##### 2.5.7 分页查询
+#### 2.5.7 分页查询
 
 ```mysql
 SELECT 字段列表 FROM 表名 LIMIT 起始索引, 查询记录数;
@@ -851,7 +851,7 @@ SELECT 字段列表 FROM 表名 LIMIT 起始索引, 查询记录数;
 >   SELECT * FROM emps LIMIT 10,10;
 >   ```
 
-##### 2.5.8 综合案例：
+#### 2.5.8 综合案例：
 
 - 查询年龄为20,21,22,23岁的 女员工信息。
 
@@ -884,7 +884,7 @@ SELECT 字段列表 FROM 表名 LIMIT 起始索引, 查询记录数;
   SELECT * FROM emps WHERE gender = '男' AND (age BETWEEN 20 AND 40)ORDER BY age ASC, entrydate DESC LIMIT 0,5;
   ```
 
-##### 2.5.9 执行顺序
+#### 2.5.9 执行顺序
 
 编写顺序：
 
@@ -940,7 +940,125 @@ LIMIT
 >
 >   >from ... where ... group by ... having ... select ... order by ... limit ...
 
+### 2.6 DCL
 
+>DCL英文全称是 Data Control Language(数据控制语言)，用来管理数据库用户、控制数据库的访问权限。
 
+#### 2.6.1 管理用户
 
+- 查询用户
+
+  ```mysql
+  SELECT * FROM mysql.user;
+  ```
+
+>其中 Host代表当前用户访问的主机, 如果为localhost, 仅代表只能够在当前本机访问，是不可以远程访问的。 User代表的是访问该数据库的用户名。在MySQL中需要通过Host和User来唯一标识一个用户。
+
+- 创建用户
+
+  ```mysql
+  CREATE USER '用户名'@'主机名' IDENTIFIED BY '密码';
+  ```
+
+- 修改用户密码
+
+  ```mysql
+  ALTER USER '用户名'@'主机名' IDENTIFIED WITH mysql_native_password BY '新密码';
+  ```
+
+- 删除密码
+
+  ```mysql
+  DROP USER '用户名'@'主机名';
+  ```
+
+> - 在MySQL中需要通过用户名@主机名的方式，来唯一标识一个用户。
+> - 主机名可以使用 % 通配。
+> - 这类SQL开发人员操作的比较少，主要是DBA（Database Administrator 数据库管理员）使用。
+
+**相关案例：**
+
+① 创建用户coisini, 只能够在当前主机localhost访问, 密码123456；
+
+```mysql
+CREATE USER 'coisini'@'localhost' IDENTIFIED BY '123456';
+```
+
+② 创建用户 xiao , 可以在任意主机访问该数据库, 密码123456；
+
+```mysql
+CREATE USER 'xiao'@'%' IDENTIFIED BY '123456';
+```
+
+③ 修改用户 xiao 的访问密码为12345;
+
+```mysql
+-- MySQL8.0语法
+ALTER USER 'xiao'@'%' IDENTIFIED WITH mysql_native_password BY '1234';
+-- MySQL9.0语法
+ALTER USER 'xiao'@'%' IDENTIFIED BY '1234';
+```
+
+④ 删除coisini@localhost 用户
+
+```mysql
+DROP USER 'coisini'@'localhost';
+```
+
+#### 2.6.2 权限控制
+
+| 权限                | 说明               |
+| ------------------- | ------------------ |
+| ALL, ALL PRIVILEGES | 所有权限           |
+| SELECT              | 查询数据           |
+| INSERT              | 插入数据           |
+| UPDATE              | 修改数据           |
+| DELETE              | 删除数据           |
+| ALTER               | 修改表             |
+| DROP                | 删除数据库/表/视图 |
+| CREATE              | 创建数据库/表      |
+
+更多权限：[https://dev.mysql.com/doc/refman/8.4/en/privileges-provided.html](https://dev.mysql.com/doc/refman/8.4/en/privileges-provided.html)
+
+- 查询权限
+
+  ```mysql
+  SHOW GRANTS FOR '用户名'@'主机名';
+  ```
+
+- 授予权限
+
+  ```mysql
+  GRANT 权限列表 ON 数据库名.表名 TO '用户名'@'主机名';
+  ```
+
+- 撤销权限
+
+  ```mysql
+  REVOKE 权限列表 ON 数据库名.表名 FROM '用户名'@'主机名';
+  ```
+
+> 多个权限使用, 使用逗号分隔
+>
+> 授权时，数据库名 和 表名 可以使用 * 进行通配，代表所有。
+
+**相关案例：**
+
+① 查询 'xiao'@'%'用户的权限
+
+```mysql
+SHOW GRANTS FOR 'xiao'@'%';
+```
+
+② 授予 'xiao'@'%' 用户 emps数据库 所有表 的所有操作权限
+
+```mysql
+GRANT ALL ON emps.* TO 'xiao'@'%';
+```
+
+③ 撤销 'xiao'@'%' 用户的 emps 数据库的所有权限
+
+```mysql
+REVOKE ALL ON emps.* FROM 'xiao'@'%';
+```
 

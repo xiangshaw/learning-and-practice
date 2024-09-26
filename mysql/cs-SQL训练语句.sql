@@ -1,3 +1,4 @@
+# DDL 英文全称 Data Definition Language，数据定义语言，用来定义数据库对象(数据库，表，字段) 。
 # 查询所有数据库:
 SHOW DATABASES;
 
@@ -54,6 +55,10 @@ DROP TABLE IF EXISTS tb_user;
 # 删除指定表，并重新创建表（似清空表数据）
 TRUNCATE TABLE emp;
 
+--
+--
+--
+# DML 英文全称是Data Manipulation Language(数据操作语言)，用来对数据库中表的数据记录进行增、删、改操作。
 # 给emps表所有字段添加数据
 INSERT INTO emps(id,workno,name,gender,age,idcard,entrydate) VALUES(1,'1','coisini','男',20,'987654321012345678','2000-01-01');
 
@@ -84,7 +89,8 @@ DELETE FROM emps;
 --
 --
 --
-
+# DQL 英文全称是Data Query Language(数据查询语言)，数据查询语言，用来查询数据库中表的记录。
+# 查询关键字: SELECT
 # 数据准备
 DROP TABLE IF EXISTS emps;
 CREATE TABLE emps(
@@ -235,3 +241,35 @@ SELECT name,age FROM emps WHERE age >15 ORDER BY age ASC;
 SELECT e.name,e.age FROM emps e WHERE e.age >15 ORDER BY e.age ASC;
 
 # 执行顺序 FROM ... WHERE ... GROUP BY ... HAVING ... SELECT ... ORDER BY  ... LIMIT ...
+
+--
+--
+--
+# DCL 英文全称是 Data Control Language(数据控制语言)，用来管理数据库用户、控制数据库的访问权限。
+# 查询用户
+SELECT * FROM mysql.user;
+# 其中 Host代表当前用户访问的主机,如果为localhost,仅代表只能够在当前本机访问，是不可以远程访问的。 User代表的是访问该数据库的用户名。在MySQL中需要通过Host和User来唯一标识一 个用户。
+
+# 创建用户 coisini , 只能够在当前主机 localhost 访问, 密码123456;
+CREATE USER 'coisini'@'localhost' IDENTIFIED BY '123456';
+
+# 创建用户 xiao , 可以在任意主机访问该数据库, 密码123456；
+CREATE USER 'xiao'@'%' IDENTIFIED BY '123456';
+
+# 修改用户 xiao 的访问密码为12345;
+-- MySQL8.0语法
+ALTER USER 'xiao'@'%' IDENTIFIED WITH mysql_native_password BY '1234';
+-- MySQL9.0语法
+ALTER USER 'xiao'@'%' IDENTIFIED BY '1234';
+
+# 删除coisini@localhost 用户
+DROP USER 'coisini'@'localhost';
+
+# 查询 'xiao'@'%' 用户权限
+SHOW GRANTS FOR 'xiao'@'%';
+
+# 授予 'xiao'@'%' 用户 emps数据库 所有表 的所有操作权限
+GRANT ALL ON emps.* TO 'xiao'@'%';
+
+# 撤销 'xiao'@'%' 用户的 emps 数据库的所有权限
+REVOKE ALL ON emps.* FROM 'xiao'@'%';
