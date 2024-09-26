@@ -56,7 +56,7 @@ Data Definition Language，数据定义语言，用来定义数据库对象(数�
 
 - 创建数据库：
   `CREATE DATABASE [ IF NOT EXISTS ] 数据库名 [ DEFAULT CHARSET 字符集] [COLLATE 排序规则 ];` 
-  -  create database IF NOT EXISTS cs default charset utf8mb4 COLLATE utf8mb4_unicode_ci;
+  -  create database IF NOT EXISTS emp default charset utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 - 删除数据库:
   `DROP DATABASE [ IF EXISTS ] 数据库名;`  
