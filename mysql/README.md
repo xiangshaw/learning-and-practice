@@ -1289,3 +1289,186 @@ SELECT name, CASE workaddress WHEN '北京' THEN '一线城市' WHEN '上海' TH
   > (CASE WHEN chinese >= 98 THEN '优秀' WHEN chinese >= 75 THEN '及格' ELSE '良好' END) '语文'
   > FROM score;
   > ```
+
+## 4. 约束
+
+> 概念：作用于表中字段上的规则，用于限制存储在表中的数据。
+>
+> 目的：保证数据库中数据的正确、有效性和完整性。
+>
+> 分类：
+
+| 约束                   | 描述                                                     | 关键字      |
+| ---------------------- | -------------------------------------------------------- | ----------- |
+| 非空约束               | 限制该字段数据不为NULL                                   | NOT NULL    |
+| 唯一约束               | 保证该字段所有数据都是唯一、不重复的                     | UNIQUE      |
+| 主键约束               | 主键是一行数据的唯一标识，要求非空唯一                   | PRIMARY KEY |
+| 默认约束               | 保存数据时，如果未指定该字段的值，则采用默认值           | DEFAULT     |
+| 检查约束（8.0.16版本） | 保证字段值满足某一个条件                                 | CHECK       |
+| 外键约束               | 用来让两张表的数据之间建立连接，保证数据的一致性和完整性 | FOREIGN KEY |
+
+### 4.1 常见约束
+
+| 字段名 | 字段含义   | 字段类型    | 约束条件                  | 约束关键字                 |
+| ------ | ---------- | ----------- | ------------------------- | -------------------------- |
+| id     | ID唯一标识 | int         | 主键，自动增长            | PRIMARY KEY,AUTO_INCREMENT |
+| name   | 姓名       | varchar(10) | 不为空，并且唯一          | NOT NULL , UNIQUE          |
+| age    | 年龄       | int         | 大于0，并且小于等于120    | CHECK                      |
+| status | 状态       | char(1)     | 如果没有指定该值，默认为1 | DEFAULT                    |
+| gender | 性别       | char(1)     |                           |                            |
+
+对应建表语句：
+
+```mysql
+CREATE TABLE tb_user(
+	id int AUTO_INCREMENT PRIMARY KEY COMMENT 'id主键',
+    name VARCHAR(10) NOT NULL UNIQUE COMMENT '姓名',
+    age int CHECK(age > 0 && age <= 120) COMMENT '年龄',
+    status CHAR(1) DEFAULT '1' COMMENT '状态',
+    gender CHAR(1) COMMENT '性别'
+) COMMENT '用户表';
+```
+
+添加数据：(测试约束的有效性)
+
+```mysql
+INSERT INTO tb_user(name,age,status,gender) VALUES ('Tom1',19,'1','男'), ('Tom2',25,'0','男');
+INSERT INTO tb_user(name,age,status,gender) VALUES ('Tom3',19,'1','男');
+INSERT INTO tb_user(name,age,status,gender) VALUES (null,19,'1','男');
+INSERT INTO tb_user(name,age,status,gender) VALUES ('Tom3',19,'1','男');
+INSERT INTO tb_user(name,age,status,gender) VALUES ('Tom4',80,'1','男');
+INSERT INTO tb_user(name,age,status,gender) VALUES ('Tom5',-1,'1','男');
+INSERT INTO tb_user(name,age,status,gender) VALUES ('Tom5',121,'1','男');
+INSERT INTO tb_user(name,age,gender) VALUES ('Tom5',120,'男');
+```
+
+### 4.2 外键约束
+
+> 外键：用来让两张表的数据之间建立连接，从而保证数据一致性和完整性。
+>
+> 例如：A表中存有B表的id字段值，如果需要查询B表数据。需要关联起来，
+>
+> 但只是在逻辑上存在这样一层关系。在数据库层面，并未建立外键关联， 
+> 所以是无法保证数据的一致性和完整性的。
+
+数据准备：
+
+```mysql
+CREATE TABLE dept(
+    id  int auto_increment primary key COMMENT 'ID',
+    name varchar(50) not null COMMENT '部门名称'
+  )COMMENT '部门表';
+  
+INSERT INTO dept (id, name) VALUES (1, '研发部'), (2, '市场部'),(3, '财务部'), (4, '销售部'), (5, '总经办');
+
+CREATE TABLE emp(
+      id  int auto_increment primary key COMMENT 'ID',
+      name varchar(50) not null COMMENT '姓名',
+      age int COMMENT '年龄',
+      job varchar(20) COMMENT '职位',
+      salary int COMMENT '薪资',
+      entrydate date COMMENT '入职时间',
+      managerid int COMMENT '直属领导ID',
+      dept_id int COMMENT '部门ID'
+)COMMENT '员工表';
+
+INSERT INTO emp (id, name, age, job,salary, entrydate, managerid, dept_id) VALUES (1, '金庸', 66, '总裁',20000, '2000-01-01', null,5),(2, '张无忌', 20,'项目经理',12500, '2005-12-05', 1,1),(3, '杨逍', 33, '开发', 8400,'2000-11-03', 2,1),(4, '韦一笑', 48, '开发',11000, '2002-02-05', 2,1),(5, '常遇春', 43, '开发',10500, '2004-09-07', 3,1),(6, '小昭', 19, '程序员鼓励师',6600, '2004-10-12', 2,1);
+```
+
+> 此时删除id为1的部门信息，部门表不存在id为1的部门，而在emp表中还有很多的员工关联的为id为1的部门，此时就出现了数据的不完整性。
+>
+> ``` mysql
+> SELECT * FROM emp;
+> SELECT * FROM dept;
+> # 尝试删除id为1的部门信息
+> DELETE FROM dept WHERE id = 1;
+> ```
+>
+> 解决： 创建数据库外键约束。
+
+#### 4.2.1 语法
+
+① 添加外键
+
+```mysql
+CREATE TABLE 表名(
+	字段名 数据类型,
+    ...
+    [CONSTRAINT] [外键名称] FOREIGN KEY (外键字段名) REFERENCES 主表(主表列名)
+);
+```
+
+```mysql
+ALTER TABLE 表名 ADD CONSTRAINT 外键名称 FOREIGN KEY (外键字段名) REFERENCES 主表 (主表列名);
+```
+
+**相关案例：**
+
+- 为emp表的dept_id字段添加外键约束,关联dept表的主键id。
+
+  ```mysql
+  ALTER TABLE emp ADD CONSTRAINT fk_emp_dept_id FOREIGN KEY (dept_id)REFERENCES dept(id);
+  
+  # 尝试删除id为1的部门信息
+  DELETE FROM dept WHERE id = 1;
+  ```
+
+② 删除外键
+
+```mysql
+ALTER TABLE 表名 DROP FOREIGN KEY 外键名称
+```
+
+- 删除emp表的外键fk_emp_dept_id
+
+  ```mysql
+  ALTER TABLE emp DROP FOREIGN KEY fk_emp_dept_id;
+  ```
+
+#### 4.2.2 删除/更新行为
+
+>添加了外键之后，再删除父表数据时产生的约束行为，称为删除/更新行为。具体有以下几种:
+
+| 行为        | 说明                                                         |
+| ----------- | ------------------------------------------------------------ |
+| NO ACTION   | 当在父表中删除/更新对应记录时，首先检查该记录是否有对应外键，如果有则不允许删除/更新。 (与 RESTRICT 一致) 默认行为 |
+| RESTRICT    | 当在父表中删除/更新对应记录时，首先检查该记录是否有对应外键，如果有则不允许删除/更新。 (与 NO ACTION 一致) 默认行为 |
+| CASCADE     | 当在父表中删除/更新对应记录时，首先检查该记录是否有对应外键，如果有，则也删除/更新外键在子表中的记录。 |
+| SET NULL    | 当在父表中删除对应记录时，首先检查该记录是否有对应外键，如果有则设置子表中该外键值为null（这就要求该外键允许取null）。 |
+| SET DEFAULT | 父表有变更时，子表将外键列设置成一个默认的值 (Innodb不支持)  |
+
+语法：
+
+```mysql
+ALTER TABLE 表名 ADD CONSTRAINT 外键名称 FOREIGN KEY (外键字段) REFERENCES 主表名 (主表字段名) ON UPDATE CASCADE ON DELETE CASCADE;
+```
+
+- CASCADE级联
+
+  ```mysql
+  ALTER TABLE emp ADD CONSTRAINT fk_emp_dept_id FOREIGN KEY (dept_id) REFERENCES dept(id) ON UPDATE CASCADE ON DELETE CASCADE;
+  
+  # 父表id为1的值修改为6
+  UPDATE dept  SET id = '6' WHERE id = '1';
+  
+  # 此时查询emp，dept_id会级联修改
+  SELECT * FROM emp;
+  ```
+
+  > 但是如果删除操作，emp对应表数据也会级联删除
+
+- SET NULL 
+
+  > ```mysql
+  > ALTER TABLE emp ADD CONSTRAINT fk_emp_dept_id FOREIGN KEY (dept_id) REFERENCES dept(id) ON UPDATE SET null ON DELETE SET null ;
+  > ```
+
+此时删除id为6的部门数据
+
+```mysql
+DELETE FROM dept WHERE id = '6';
+
+# 此时查询emp，dept_id会联动修改为NULL
+SELECT * FROM emp;
+```
+

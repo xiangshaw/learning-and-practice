@@ -387,3 +387,79 @@ SELECT name,
 (CASE WHEN chinese >= 98 THEN '优秀' WHEN chinese >= 75 THEN '及格' ELSE '良好' END) '语文'
 FROM score;
 
+--
+--
+--
+# 约束
+CREATE TABLE tb_user(
+	id int AUTO_INCREMENT PRIMARY KEY COMMENT 'id主键',
+    name VARCHAR(10) NOT NULL UNIQUE COMMENT '姓名',
+    age int CHECK(age > 0 && age <= 120) COMMENT '年龄',
+    status CHAR(1) DEFAULT '1' COMMENT '状态',
+    gender CHAR(1) COMMENT '性别'
+) COMMENT '用户表';
+
+# 添加数据（测试约束有效性）
+INSERT INTO tb_user(name,age,status,gender) VALUES ('Tom1',19,'1','男'), ('Tom2',25,'0','男');
+INSERT INTO tb_user(name,age,status,gender) VALUES ('Tom3',19,'1','男');
+INSERT INTO tb_user(name,age,status,gender) VALUES (null,19,'1','男');
+INSERT INTO tb_user(name,age,status,gender) VALUES ('Tom3',19,'1','男');
+INSERT INTO tb_user(name,age,status,gender) VALUES ('Tom4',80,'1','男');
+INSERT INTO tb_user(name,age,status,gender) VALUES ('Tom5',-1,'1','男');
+INSERT INTO tb_user(name,age,status,gender) VALUES ('Tom5',121,'1','男');
+INSERT INTO tb_user(name,age,gender) VALUES ('Tom5',120,'男');
+
+--
+# 外键约束
+CREATE TABLE dept(
+    id  int auto_increment primary key COMMENT 'ID',
+    name varchar(50) not null COMMENT '部门名称'
+		)COMMENT '部门表';
+	
+INSERT INTO dept (id, name) VALUES (1, '研发部'), (2, '市场部'),(3, '财务部'), (4, '销售部'), (5, '总经办');
+
+CREATE TABLE emp(
+      id  int auto_increment primary key COMMENT 'ID',
+      name varchar(50) not null COMMENT '姓名',
+      age int COMMENT '年龄',
+      job varchar(20) COMMENT '职位',
+      salary int COMMENT '薪资',
+      entrydate date COMMENT '入职时间',
+      managerid int COMMENT '直属领导ID',
+      dept_id int COMMENT '部门ID'
+)COMMENT '员工表';
+
+INSERT INTO emp (id, name, age, job,salary, entrydate, managerid, dept_id) VALUES (1, '金庸', 66, '总裁',20000, '2000-01-01', null,5),(2, '张无忌', 20,'项目经理',12500, '2005-12-05', 1,1),(3, '杨逍', 33, '开发', 8400,'2000-11-03', 2,1),(4, '韦一笑', 48, '开发',11000, '2002-02-05', 2,1),(5, '常遇春', 43, '开发',10500, '2004-09-07', 3,1),(6, '小昭', 19, '程序员鼓励师',6600, '2004-10-12', 2,1);
+
+SELECT * FROM emp;
+SELECT * FROM dept;
+
+# 尝试删除id为1的部门信息
+DELETE FROM dept WHERE id = 1;
+
+# 创建外键
+ALTER TABLE emp ADD CONSTRAINT fk_emp_dept_id FOREIGN KEY (dept_id)REFERENCES dept(id);
+
+# 尝试删除id为1的部门信息
+DELETE FROM dept WHERE id = 1;
+
+#删除emp表的外键fk_emp_dept_id
+ALTER TABLE emp DROP FOREIGN KEY fk_emp_dept_id;
+
+# CASCADE 当在父表中删除/更新对应记录时，首先检查该记录是否有对应外键，如果有，则也删除/更新外键在子表中的记录。
+ALTER TABLE emp ADD CONSTRAINT fk_emp_dept_id FOREIGN KEY (dept_id) REFERENCES dept(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+# 父表id为1的值修改为6
+UPDATE dept  SET id = '6' WHERE id = '1';
+
+# 此时查询emp，dept_id会联动修改
+SELECT * FROM emp;
+
+# SET	NULL 当在父表中删除对应记录时，首先检查该记录是否有对应外键，如果有则设置子表中该外键值为null（这就要求该外键允许取null）。
+ALTER TABLE emp ADD CONSTRAINT fk_emp_dept_id FOREIGN KEY (dept_id) REFERENCES dept(id) ON UPDATE SET null ON DELETE SET null ;
+
+# 此时删除id为6的部门数据
+DELETE FROM dept WHERE id = '6';
+
+# 此时查询emp，dept_id会联动修改为NULL
+SELECT * FROM emp;
