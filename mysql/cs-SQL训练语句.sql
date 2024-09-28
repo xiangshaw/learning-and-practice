@@ -463,3 +463,315 @@ DELETE FROM dept WHERE id = '6';
 
 # 此时查询emp，dept_id会联动修改为NULL
 SELECT * FROM emp;
+
+# 多对多
+CREATE TABLE student(
+			id int AUTO_INCREMENT PRIMARY KEY COMMENT '主键ID',
+      name varchar(10) COMMENT '姓名',
+      NO varchar(10) COMMENT '学号'
+   ) COMMENT '学生表';
+
+INSERT INTO student VALUES (null,'黛绮丝', '2000100101'),(null,'谢逊', '2000100102'),(null, '殷天正', '2000100103'),(null,'韦一笑','2000100104');
+
+CREATE TABLE course(
+	id int AUTO_INCREMENT PRIMARY KEY COMMENT '主键ID',
+	name varchar(10) COMMENT '课程名称'
+   ) COMMENT '课程表';
+   
+INSERT INTO course values (null, 'Java'), (null, 'PHP'), (null , 'MySQL'), (null, 'Hadoop');
+
+CREATE TABLE student_course(
+    id int AUTO_INCREMENT PRIMARY KEY COMMENT '主键',
+    studentid int NOT null COMMENT '学生ID',
+    courseid int NOT null COMMENT '课程ID',
+    CONSTRAINT fk_courseid FOREIGN KEY (courseid) REFERENCES course (id),
+    CONSTRAINT fk_studentid FOREIGN KEY (studentid) REFERENCES student (id)
+   )COMMENT '学生课程中间表';
+
+INSERT INTO student_course VALUES (null,1,1),(null,1,2),(null,1,3),(null,2,2), (null,2,3),(null,3,4);
+
+# 一对一
+CREATE TABLE tb_users(
+ id int AUTO_INCREMENT PRIMARY KEY COMMENT '主键ID',
+ name varchar(10) COMMENT '姓名',
+ age int COMMENT '年龄',
+ gender char(1) COMMENT '1: 男 , 2: 女',
+ phone char(11) COMMENT '手机号'
+) COMMENT '用户基本信息表';
+
+CREATE TABLE tb_users_edu(
+		id int AUTO_INCREMENT PRIMARY KEY COMMENT '主键ID',
+    degree varchar(20) COMMENT '学历',
+    major varchar(50) COMMENT '专业',
+    primaryschool varchar(50) COMMENT '小学',
+    middleschool varchar(50) COMMENT '中学',
+    university varchar(50) COMMENT '大学',
+    userid int UNIQUE COMMENT '用户ID',
+    CONSTRAINT fk_userid FOREIGN KEY (userid) REFERENCES tb_users(id)
+) COMMENT '用户教育信息表';
+
+INSERT INTO tb_users(id, name, age, gender, phone) values (null,'黄渤',45,'1','18800001111'),(null,'冰冰',35,'2','18800002222'),(null,'码云',55,'1','18800008888'),(null,'李彦宏',50,'1','18800009999');
+
+INSERT INTO tb_users_edu(id, degree, major, primaryschool, middleschool, university, userid) VALUES (null,'本科','舞蹈','静安区第一小学','静安区第一中学','北京舞蹈学院',1),(null,'硕士','表演','朝阳区第一小学','朝阳区第一中学','北京电影学院',2),(null,'本科','英语','杭州市第一小学','杭州市第一中学','杭州师范大学',3),(null,'本科','应用数学','阳泉第一小学','阳泉区第一中学','清华大学',4);
+
+--
+--
+--
+# 多表查询
+--- 删除之前emp,dept表测试数据
+DROP TABLE IF EXISTS emp;
+DROP TABLE IF EXISTS dept;
+
+-- 创建emp,dept表并添加测试数据
+CREATE TABLE dept(
+	id int AUTO_INCREMENT PRIMARY KEY COMMENT 'ID主键',
+  name VARCHAR(50) NOT NULL COMMENT '部门名称'
+) COMMENT '部门表';
+
+INSERT INTO dept(id, name)VALUES(1,'研发部'),(2,'市场部'),(3,'财务部'),(4,'销售部'),(5,'总经办'),(6,'人事部');
+
+CREATE TABLE emp(
+	id int AUTO_INCREMENT PRIMARY KEY COMMENT 'ID主键',
+    name VARCHAR(50)NOT NULL COMMENT '姓名',
+    age int COMMENT '年龄',
+    job VARCHAR(20) COMMENT '职位',
+    salary int COMMENT '薪资',
+    entrydate date COMMENT '入职时间',
+    managerid int COMMENT '直属领导ID',
+    dept_id int COMMENT '部门ID'
+) COMMENT '员工表';
+
+-- 添加外键
+ALTER TABLE emp ADD CONSTRAINT fk_emp_dept_id FOREIGN KEY (dept_id) REFERENCES dept(id);
+
+INSERT INTO emp (id, name, age, job,salary, entrydate, managerid, dept_id) VALUES
+(1, '金庸', 66, '总裁',20000, '2000-01-01', null,5),
+(2, '张无忌', 20, '项目经理',12500, '2005-12-05', 1,1),
+(3, '杨逍', 33, '开发', 8400,'2000-11-03', 2,1),
+(4, '韦一笑', 48, '开发',11000, '2002-02-05', 2,1),
+(5, '常遇春', 43, '开发',10500, '2004-09-07', 3,1),
+(6, '小昭', 19, '程序员鼓励师',6600, '2004-10-12', 2,1),
+(7, '灭绝', 60, '财务总监',8500, '2002-09-12', 1,3),
+(8, '周芷若', 19, '会计',48000, '2006-06-02', 7,3),
+(9, '丁敏君', 23, '出纳',5250, '2009-05-13', 7,3),
+(10, '赵敏', 20, '市场部总监',12500, '2004-10-12', 1,2),
+(11, '鹿杖客', 56, '职员',3750, '2006-10-03', 10,2),
+(12, '鹤笔翁', 19, '职员',3750, '2007-05-09', 10,2),
+(13, '方东白', 19, '职员',5500, '2009-02-12', 10,2),
+(14, '张三丰', 88, '销售总监',14000, '2004-10-12', 1,4),
+(15, '俞莲舟', 38, '销售',4600, '2004-10-12', 14,4),
+(16, '宋远桥', 40, '销售',4600, '2004-10-12', 14,4),
+(17, '陈友谅', 42, null,2000, '2011-10-12', 1,null);
+
+# 多表查询
+SELECT *  FROM emp,dept WHERE emp.dept_id = dept.id;
+
+# 查询每一个员工的姓名，及关联的部门的名称（隐式内连接实现）
+SELECT emp.name, dept.name FROM emp, dept WHERE emp.dept_id = dept.id;
+
+-- 简写
+select e.name,d.name from emp e , dept d where e.dept_id = d.id;
+
+# 查询每一个员工的姓名，及关联的部门的名称（显示内连接实现）INNER JON
+SELECT e.name, d.name FROM emp e INNER JOIN dept d ON e.dept_id = d.id;
+
+-- 简写
+SELECT e.name, d.name FROM emp e JOIN dept d ON e.dept_id = d.id;
+
+# 查询emp表的所有数据, 和对应的部门信息。（使用左外连接查询）
+SELECT e.*, d.name FROM emp e LEFT OUTER JOIN dept d ON e.dept_id = d.id;
+
+-- 简写
+SELECT e.*, d.name FROM emp e LEFT JOIN dept d ON e.dept_id = d.id;
+
+# 查询dept表所有数据，和对应的员工信息（使用外连接查询）
+-- 右外连接
+SELECT d.*, e.* FROM emp e RIGHT OUTER JOIN dept d ON e.dept_id = d.id;
+
+-- 左外连接
+SELECT d.*, e.* FROM dept d LEFT OUTER JOIN emp e ON e.dept_id = d.id;
+
+# 自连接 
+# SELECT 字段列表 FROM 表A 别名A JOIN 表A 别名B ON 条件...;
+# 查询员工 及其领导的名字
+# emp
+SELECT a.name, b.name FROM emp a , emp b WHERE a.managerid = b.id;
+SELECT a.name, b.name FROM emp a JOIN emp b ON a.managerid = b.id;
+
+#查询所有员工 emp 及其领导的名字 emp , 如果员工没有领导, 也需查询出来
+#表结构: emp a , emp b
+SELECT a.name '员工', b.name '领导' FROM emp a LEFT JOIN emp b ON a.managerid = b.id;
+
+# 联合查询
+# 将薪资低于5000的员工，和 年龄大于50岁的员工查询出来。
+# UNION ALL 仅仅简单合并，未去重
+SELECT * FROM emp WHERE salary < 5000 UNION ALL SELECT * FROM emp  WHERE age > 50;
+
+# UNION 可去重
+SELECT * FROM emp WHERE salary < 5000 UNION SELECT * FROM emp  WHERE age > 50;
+
+# 如果多条查询语句查询出来的结果，字段数量不一致，在进行union/union all联合查询时，将会报错。
+SELECT * FROM emp WHERE salary < 5000 
+UNION 
+SELECT name FROM emp  WHERE age > 50;
+-- 1222 - The used SELECT statements have a different number of columns
+
+# 标量子查询
+# 查询“销售部”所有员工信息
+SELECT * FROM emp WHERE dept_id = (SELECT id FROM dept WHERE name = '销售部');
+
+# 查询在“方东白”入职之后的员工信息
+SELECT * FROM emp WHERE entrydate > (SELECT entrydate FROM emp WHERE name = '方东白');
+
+# 查询“销售部” 和 “市场部” 的所有员工信息
+SELECT id FROM dept WHERE name = '销售部' OR name = '市场部';
+SELECT * FROM emp WHERE dept_id IN (SELECT id FROM dept WHERE name = '销售部' OR name = '市场部');
+
+# 查询比财务部所有人工资都高的信息
+-- 查询 财务部 用户id
+SELECT id FROM dept WHERE name = '财务部';
+
+-- 查询 财务部用户工资
+SELECT salary FROM emp WHERE dept_id = (SELECT id FROM dept WHERE name = '财务部');
+
+-- 查询比财务部所有人工资都高的信息
+SELECT * FROM emp WHERE salary > ALL (SELECT salary FROM emp WHERE dept_id = (SELECT id FROM dept WHERE name = '财务部'));
+
+# 查询比研发部其中任意一人工资高的员工信息
+-- 查询研发部所有人工资
+SELECT salary FROM emp WHERE dept_id = (SELECT id FROM dept WHERE name = '研发部');
+
+-- 比研发部其中任意一人工资高的员工信息
+SELECT * FROM emp WHERE salary > ANY(SELECT salary FROM emp WHERE dept_id = (SELECT id FROM dept WHERE name = '研发部'));
+
+# 查询与“张无忌”的薪资及直属领导相同的员工信息
+-- 查询“张无忌”的薪资及直属领导
+SELECT salary,managerid FROM emp WHERE name = '张无忌';
+
+-- 查询与"张无忌" 的薪资及直属领导相同的员工信息
+SELECT * FROM emp WHERE (salary,managerid) = (SELECT salary,managerid FROM emp WHERE name = '张无忌');
+
+# 查询与"鹿杖客", "宋远桥"的职位和薪资相同的员工信息。
+-- 查询"鹿杖客", "宋远桥" 的职位和薪资
+SELECT job,salary FROM emp WHERE name = '鹿杖客' OR name = '宋远桥';
+
+-- 查询与"鹿杖客", "宋远桥" 的职位和薪资相同的员工信息
+SELECT * FROM emp WHERE (job,salary) IN (SELECT job,salary FROM emp WHERE name = '鹿杖客' OR name = '宋远桥');
+
+# 查询入职日期“2006-01-01”之后的员工信息，及其部分信息
+-- 入职日期是"2006-01-01" 之后的员工信息
+SELECT * FROM emp WHERE entrydate > '2006-01-01';
+
+-- 查询这部分员工, 对应的部门信息;
+SELECT e.*, d.* FROM (SELECT * FROM emp WHERE entrydate > '2006-01-01') e LEFT JOIN dept d ON e.dept_id = d.id;
+
+--
+--
+# 多表查询
+# 数据准备
+
+CREATE TABLE salgrade(
+    grade int,
+    losal int,
+    hisal int
+) COMMENT '薪资等级表';
+
+INSERT INTO salgrade VALUES (1,0,3000);
+INSERT INTO salgrade VALUES (2,3001,5000);
+INSERT INTO salgrade VALUES (3,5001,8000);
+INSERT INTO salgrade VALUES (4,8001,10000);
+INSERT INTO salgrade VALUES (5,10001,15000);
+INSERT INTO salgrade VALUES (6,15001,20000);
+INSERT INTO salgrade VALUES (7,20001,25000);
+INSERT INTO salgrade VALUES (8,25001,30000);
+
+# 查询员工的姓名、年龄、职位、部门信息（隐式内连接） 
+# 表: emp, dept 连接条件: emp.dept_id = dept.id
+SELECT e.name '姓名',e.age '年龄', e.job '职位', d.name '部门信息'
+FROM emp e, dept d 
+WHERE e.dept_id = d.id;
+
+# 查询年龄小于30岁的员工的姓名、年龄、职位、部门信息（显式内连接） 
+# 表: emp , dept 连接条件: emp.dept_id = dept.id
+SELECT e.name '姓名',e.age '年龄', e.job '职位', d.name '部门信息'
+FROM emp e INNER JOIN dept d ON e.dept_id = d.id WHERE age < 30;
+
+# 查询拥有员工的部门ID、部门名称 
+# 表: emp , dept
+# 连接条件: emp.dept_id = dept.id
+SELECT DISTINCT d.id, d.name
+FROM emp e, dept d
+WHERE e.dept_id = d.id;
+
+# 查询所有年龄大于40岁的员工, 及其归属的部门名称; 如果员工没有分配部门, 也需要展示出来(外连接)
+# 表: emp , dept
+# 连接条件: emp.dept_id = dept.id
+SELECT e.*,d.name
+FROM emp e
+LEFT JOIN dept d ON e.dept_id = d.id WHERE e.age > 40;
+
+# 查询所有员工的工资等级 
+# 表: emp , salgrade
+# 连接条件 : emp.salary >= salgrade.losal and emp.salary <= salgrade.hisal
+SELECT e.*, s.grade, s.losal, s.hisal
+FROM emp e, salgrade s
+WHERE e.salary >= s.losal and e.salary <= s.hisal;
+--
+SELECT e.*, s.grade, s.losal, s.hisal
+FROM emp e, salgrade s
+WHERE e.salary BETWEEN s.losal AND s.hisal;
+
+# 查询"研发部" 所有员工的信息及工资等级表: emp, salgrade, dept
+# 连接条件: emp.salary between salgrade.losal and salgrade.hisal, emp.dept_id = dept.id
+# 查询条件: dept.name = '研发部'
+SELECT e.*, s.grade
+FROM emp e, salgrade s, dept d
+WHERE e.dept_id = d.id AND (e.salary BETWEEN s.losal AND s.hisal) AND
+d.name = '研发部';
+
+# 查询"研发部" 员工的平均工资 
+# 表: emp , dept
+# 连接条件 : emp.dept_id = dept.id
+SELECT AVG(e.salary)
+FROM emp e, dept d
+WHERE e.dept_id = d.id AND d.name = '研发部';
+
+# 查询工资比"灭绝" 高的员工信息。 
+-- ① 查询"灭绝" 的薪资
+SELECT salary
+FROM emp
+WHERE name = '灭绝';
+-- ② 查询比她工资高的员工数据
+SELECT *
+FROM emp
+WHERE salary > (SELECT salary FROM emp WHERE name = '灭绝');
+
+
+# 查询比平均薪资高的员工信息 
+-- ① 查询员工的平均薪资
+SELECT AVG(salary) FROM emp;
+-- ② 查询比平均薪资高的员工信息
+SELECT e.*
+FROM emp e
+WHERE salary > (SELECT AVG(salary) FROM emp);
+
+# 查询低于本部门平均工资的员工信息 
+-- ① 查询指定部门平均薪资
+SELECT AVG(salary) FROM emp e WHERE e.dept_id = 1;
+SELECT AVG(salary) FROM emp e WHERE e.dept_id = 2;
+-- ② 查询低于本部门平均工资的员工信息
+SELECT *
+FROM emp e2
+WHERE e2.salary < (SELECT AVG(salary) FROM emp e1 WHERE e1.dept_id = e2.dept_id);
+
+# 查询所有的部门信息, 并统计部门的员工人数
+SELECT d.id, d.name, (SELECT COUNT(*) FROM emp e WHERE e.dept_id = d.id) '人数'
+FROM dept d;
+
+# 查询所有学生的选课情况, 展示出学生名称, 学号, 课程名称 
+# 表: student, course, student_course
+# 连接条件: student.id = student_course.studentid, course.id = student_course.courseid
+SELECT s.name '学生名称', s.NO '学号', c.name '课程名称'
+FROM student s, course c, student_course sc
+WHERE s.id = sc.studentid
+AND	c.id = sc.courseid;
