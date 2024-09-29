@@ -2119,11 +2119,171 @@ INSERT INTO salgrade VALUES (8,25001,30000);
   连接条件: student.id = student_course.studentid, course.id = student_course.courseid
 
   ```mysql
-  SELECT s.name '学生名称', s.NO '学号', c.name '课程名称'
+  SELECT s.name, s.NO, c.name
   FROM student s, course c, student_course sc
   WHERE s.id = sc.studentid
   AND	c.id = sc.courseid;
   ```
 
-  
+## 6. 事务
 
+### 6.1 简介
+
+> 一组操作的集合，一个不可分割的工作单位，事务会把所有的操作作为一个整体一起向系统提交或撤销操作请求，即这些操作要么同时成功，要么同时失败。
+>
+> 比如：
+>
+> - 张三给李四转账1000块钱，张三银行账户的钱减少1000，而李四银行账户的钱要增加1000。这一组操作就必须在一个事务的范围内，要么都成功，要么都失败。
+>
+> - 异常情况:  转账这个操作, 也是分为以下这么三步来完成, 在执行第三步是报错了, 这样就导致张三减少1000块钱, 而李四的金额没变, 这样就造成了数据的不一致, 就出现问题了。
+>
+> - 为了解决上述的问题，就需要通过数据的事务来完成，我们只需要在业务逻辑执行之前开启事务，执行完毕后提交事务。如果执行过程中报错，则回滚事务，把数据恢复到事务开始之前的状态。
+>   - 默认MySQL的事务是自动提交的，也就是说，当执行完一条DML语句时，MySQL会立即隐式的提交事务。
+
+### 6.2 事务操作
+
+```mysql
+-- 数据准备
+DROP TABLE IF EXISTS account;
+
+CREATE TABLE account(
+	id int PRIMARY KEY AUTO_INCREMENT COMMENT 'ID主键',
+    name VARCHAR(10) COMMENT '姓名',
+    money DOUBLE(10,2) COMMENT '余额'
+) COMMENT '账户表';
+
+INSERT INTO account(name,money) VALUES ('张三',2000),('李四', 2000);
+```
+
+#### 6.2.1 未控制事务
+
+- 正常操作
+
+  ```mysql
+  # 正常操作
+  -- 1. 查询张三余额
+  SELECT * FROM account WHERE name = '张三';
+  -- 2. 张三的余额减少1000
+  UPDATE account SET money = money - 1000 WHERE name = '张三';
+  -- 3. 李四的余额增加1000
+  UPDATE account SET money = money + 1000 WHERE name = '李四';
+  ```
+
+- 异常情况
+
+  ```mysql
+  -- 1. 查询张三余额
+  SELECT * FROM account WHERE name = '张三';
+  -- 2. 张三的余额减少1000
+  UPDATE account SET money = money - 1000 where name = '张三';
+   出错了....
+   -- 3. 李四的余额增加1000
+  UPDATE account SET money = money + 1000 where name = '李四';
+  ```
+
+  > 出现数据不一致情况
+
+#### 6.2.2 控制事务一
+
+- 查看/设置事务提交方式
+
+  ```mysql
+  SELECT @@autocommit;
+  SET @@autocommit = 0;
+  ```
+
+- 提交事务
+
+  ```mysql
+  COMMIT;
+  ```
+
+- 回滚事务
+
+  ```mysql
+  ROLLBACK;
+  ```
+
+  >上述方式，修改了事务的自动提交行为, 把默认自动提交修改为了手动提交, 此时执行DML语句都不会提交, 需要手动执行commit提交。
+
+#### 6.2.3 控制事务二
+
+- 开启事务
+
+  ```mysql
+  START TRANSACTION 或 BEGIN ;
+  ```
+
+- 提交事务
+
+  ```mysql
+  COMMIT;
+  ```
+
+- 回滚事务
+
+  ```mysql
+  ROLLBACK;
+  ```
+
+**转账案例：**
+
+```mysql
+-- 开启事务
+START TRANSACTION
+-- 1. 查询张三余额
+SELECT * FROM account WHERE name = '张三';
+-- 2. 张三的余额减少1000
+UPDATE account SET money = money - 1000 WHERE name = '张三';
+-- 3. 李四的余额增加1000
+UPDATE account SET money = money + 1000 WHERE name = '李四';
+-- 如果正常执行完毕, 则提交事务
+COMMIT;
+-- 如果执行过程中报错, 则回滚事务
+-- ROLLBACK;
+```
+
+### 6.3 事务四大特性
+
+- 原子性（Atomicity）：事务是不可分割的最小操作单元，要么全部成功，要么全部失败。 
+
+- 一致性（Consistency）：事务完成时，必须使所有的数据都保持一致状态。
+
+- 隔离性（Isolation）：数据库系统提供的隔离机制，保证事务在不受外部并发操作影响的独立环境下运行。
+
+- 持久性（Durability）：事务一旦提交或回滚，它对数据库中的数据的改变就是永久的。 
+
+上述就是事务的四大特性，简称ACID。
+
+### 6.4 并发事务问题
+
+- 赃读：一个事务读到另外一个事务还没有提交的数据
+- 不可重复读：一个事务先后读取同一条记录，但两次读取的数据不同，称之为不可重复读。
+- 幻读：一个事务按照条件查询数据时，没有对应的数据行，但是在插入数据时，又发现这行数据已经存在，好像出现了"幻影"。
+
+### 6.5 事务隔离级别
+
+为解决并发事务所引发的问题，数据库中引入事务隔离级别。
+
+主要有以下几种：
+
+| 隔离级别              | 脏读 | 不可重复读 | 幻读 |
+| --------------------- | ---- | ---------- | ---- |
+| READ UNCOMMITTED      | √    | √          | √    |
+| READ COMMITTED        | ×    | √          | √    |
+| REPEATABLE READ(默认) | ×    | ×          | √    |
+| SERIALIZABLE          | ×    | ×          | ×    |
+
+- 查看事务隔离级别
+
+  ```mysql
+  SELECT @@TRANSACTION_ISOLATION;
+  ```
+
+- 设置事务隔离级别
+
+  ```mysql
+  SET  [ SESSION | GLOBAL ]  TRANSACTION  ISOLATION LEVEL  { READ UNCOMMITTED | READ COMMITTED | REPEATABLE READ | SERIALIZABLE }
+  ```
+
+> 事务隔离级别越高，数据越安全，但是性能越低。

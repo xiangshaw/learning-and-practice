@@ -775,3 +775,80 @@ SELECT s.name '学生名称', s.NO '学号', c.name '课程名称'
 FROM student s, course c, student_course sc
 WHERE s.id = sc.studentid
 AND	c.id = sc.courseid;
+
+--
+--
+--
+# 事务操作
+-- 数据准备
+DROP TABLE IF EXISTS account;
+
+CREATE TABLE account(
+		id int PRIMARY KEY AUTO_INCREMENT COMMENT 'ID主键',
+    name VARCHAR(10) COMMENT '姓名',
+    money DOUBLE(10,2) COMMENT '余额'
+) COMMENT '账户表';
+
+INSERT INTO account(name, money) VALUES ('张三',2000),('李四', 2000);
+
+# 正常操作
+-- 1. 查询张三余额
+SELECT * FROM account WHERE name = '张三';
+-- 2. 张三的余额减少1000
+UPDATE account SET money = money - 1000 WHERE name = '张三';
+-- 3. 李四的余额增加1000
+UPDATE account SET money = money + 1000 WHERE name = '李四';
+
+# 异常操作
+-- 1. 查询张三余额
+SELECT * FROM account WHERE name = '张三';
+-- 2. 张三的余额减少1000
+UPDATE account SET money = money - 1000 where name = '张三';
+ 出错了....
+ -- 3. 李四的余额增加1000
+UPDATE account SET money = money + 1000 where name = '李四';
+
+
+# 控制事务一
+-- 查看/设置事务提交方式
+SELECT @@autocommit;
+SET @@autocommit = 0;
+-- 提交事务
+COMMIT;
+-- 回滚事务
+ROLLBACK;
+
+# 控制事务二
+-- 开启事务
+START TRANSACTION 或 BEGIN ;
+-- 提交事务
+COMMIT;
+-- 回滚事务
+ROLLBACK;
+
+# 转账案例
+-- 开启事务
+START TRANSACTION
+-- 1. 查询张三余额
+SELECT * FROM account WHERE name = '张三';
+-- 2. 张三的余额减少1000
+UPDATE account SET money = money - 1000 WHERE name = '张三';
+-- 3. 李四的余额增加1000
+UPDATE account SET money = money + 1000 WHERE name = '李四';
+-- 如果正常执行完毕, 则提交事务
+COMMIT;
+-- 如果执行过程中报错, 则回滚事务
+-- ROLLBACK;
+
+--
+# 查看事务隔离级别
+SELECT @@TRANSACTION_ISOLATION;
+-- READ UNCOMMITTED
+-- READ COMMITTED
+-- REPEATABLE READ
+-- SERIALIZABLE
+
+# 设置事务隔离
+SET  [ SESSION | GLOBAL ]  TRANSACTION  ISOLATION LEVEL  { READ UNCOMMITTED | READ COMMITTED | REPEATABLE READ | SERIALIZABLE }
+
+-- 事务隔离级别越高，数据越安全，但是性能越低。
