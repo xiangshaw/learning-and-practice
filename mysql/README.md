@@ -2483,3 +2483,354 @@ EXPLAIN 各字段含义：
 - rows：MySQL认为必须要执行的行数，在InnoDB引擎的表中，是一个估计值，可能并不总是准确的。
 - filtered：表示返回结果的行数占需读取行数的百分比，filtered的值越大越好。
 
+## 2. 索引
+
+>帮助 MySQL **高效获取数据**的**数据结构（有序）**
+
+优点：
+
+- 提高数据检索效率，降低数据库的IO成本  
+- 通过索引列对数据进行排序，降低数据排序的成本，降低CPU的消耗
+
+缺点：
+
+- 索引列也是要占用空间的
+- 索引大大提高了查询效率，但降低了更新的速度，比如 INSERT、UPDATE、DELETE
+
+### 2.1 索引结构
+
+| 索引结构            | 描述                                                         |
+| ------------------- | ------------------------------------------------------------ |
+| B+Tree              | 最常见的索引类型，大部分引擎都支持B+树索引                   |
+| Hash                | 底层数据结构是用哈希表实现，只有精确匹配索引列的查询才有效，不支持范围查询 |
+| R-Tree(空间索引)    | 空间索引是 MyISAM 引擎的一个特殊索引类型，主要用于地理空间数据类型，通常使用较少 |
+| Full-Text(全文索引) | 是一种通过建立倒排索引，快速匹配文档的方式，类似于 Lucene, Solr, ES |
+
+| 索引       | InnoDB        | MyISAM | Memory |
+| ---------- | ------------- | ------ | ------ |
+| B+Tree索引 | 支持          | 支持   | 支持   |
+| Hash索引   | 不支持        | 不支持 | 支持   |
+| R-Tree索引 | 不支持        | 支持   | 不支持 |
+| Full-text  | 5.6版本后支持 | 支持   | 不支持 |
+
+#### 二叉树
+
+> 缺点：顺序插入时，会形成一个链表，查询性能大大降低。大数据量情况下，层级较深，检索速度慢。
+
+![二叉树](https://jimhackking.github.io/%E8%BF%90%E7%BB%B4/MySQL%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/%E4%BA%8C%E5%8F%89%E6%A0%91.png)
+
+二叉树的链表缺点用红黑树解决：
+
+#### 红黑树
+
+> 缺点：大数据量情况下，层级较深，检索速度慢的问题。
+
+![红黑树](https://jimhackking.github.io/%E8%BF%90%E7%BB%B4/MySQL%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/%E7%BA%A2%E9%BB%91%E6%A0%91.png)
+
+#### B Tree
+
+> 以一棵最大度数（max-degree，指一个节点的子节点个数）为5（5阶）的 b tree 为例（每个节点最多存储4个key，5个指针）
+
+![B-TREE](https://jimhackking.github.io/%E8%BF%90%E7%BB%B4/MySQL%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/B-Tree%E7%BB%93%E6%9E%84.png)
+
+>B-Tree 的数据插入过程动画参照：https://www.bilibili.com/video/BV1Kr4y1i7ru?p=68
+>演示地址：https://www.cs.usfca.edu/~galles/visualization/BTree.html
+
+#### B+Tree
+
+![B+Tree](https://jimhackking.github.io/运维/MySQL学习笔记/B+Tree结构图.png)
+
+> 演示地址：https://www.cs.usfca.edu/~galles/visualization/BPlusTree.html
+
+与 B-Tree 的区别：
+
+- 所有的数据都会出现在叶子节点
+- 叶子节点形成一个单向链表
+
+MySQL 索引数据结构对经典的 B+Tree 进行了优化。在原 B+Tree 的基础上，增加一个指向相邻叶子节点的链表指针，就形成了带有顺序指针的 B+Tree，`提高区间访问的性能。`
+
+![mysql B+Tree](https://jimhackking.github.io/%E8%BF%90%E7%BB%B4/MySQL%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/%E7%BB%93%E6%9E%84%E5%9B%BE.png)
+
+#### Hash
+
+> 哈希索引就是采用一定的hash算法，将键值换算成新的hash值，映射到对应的槽位上，然后存储在hash表中。如果两个（或多个）键值，映射到一个相同的槽位上，他们就产生了hash冲突（也称为hash碰撞），可以通过链表来解决。
+
+特点：
+
+- Hash索引只能用于对等比较（=、in），不支持范围查询（betwwn、>、<、...）
+- 无法利用索引完成排序操作
+- 查询效率高，通常只需要一次检索就可以了，效率通常要高于 B+Tree 索引
+
+存储引擎支持：
+
+- Memory
+- InnoDB: 具有自适应hash功能，hash索引是存储引擎根据 B+Tree 索引在指定条件下自动构建的
+
+#### 面试题
+
+1. 为什么 InnoDB 存储引擎选择使用 B+Tree 索引结构？
+
+- 相对于二叉树，层级更少，搜索效率高
+- 对于 B-Tree，无论是叶子节点还是非叶子节点，都会保存数据，这样导致一页中存储的键值减少，指针也跟着减少，要同样保存大量数据，只能增加树的高度，导致性能降低
+- 相对于 Hash 索引，B+Tree 支持范围匹配及排序操作
+
+### 2.2 索引分类
+
+| 分类     | 含义                                                 | 特点                     | 关键字   |
+| -------- | ---------------------------------------------------- | ------------------------ | -------- |
+| 主键索引 | 针对于表中主键创建的索引                             | 默认自动创建，只能有一个 | PRIMARY  |
+| 唯一索引 | 避免同一个表中某数据列中的值重复                     | 可以有多个               | UNIQUE   |
+| 常规索引 | 快速定位特定数据                                     | 可以有多个               |          |
+| 全文索引 | 全文索引查找的是文本中的关键词，而不是比较索引中的值 | 可以有多个               | FULLTEXT |
+
+在InnoDB存储引擎中，根据索引存储形式，又可分以下两种：
+
+| 分类                      | 含义                                                       | 特点                 |
+| ------------------------- | ---------------------------------------------------------- | -------------------- |
+| 聚集索引(Clustered Index) | 将数据存储与索引放一块，索引结构的叶子节点保存了行数据     | 必须有，而且只有一个 |
+| 二级索引(Secondary Index) | 将数据与索引分开存储，索引结构的叶子节点关联的是对应的主键 | 可以存在多个         |
+
+![索引分类](https://jimhackking.github.io/%E8%BF%90%E7%BB%B4/MySQL%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/%E5%8E%9F%E7%90%86%E5%9B%BE.png)
+
+![索引分类](https://jimhackking.github.io/%E8%BF%90%E7%BB%B4/MySQL%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/%E6%BC%94%E7%A4%BA%E5%9B%BE.png)
+
+> select * from user where name = 'Arm';
+>
+> 具体过程如下:
+> ①. 由于是根据name字段进行查询，所以先根据name='Arm'到name字段的二级索引中进行匹配查找。但是在二级索引中只能查找到Arm 对应的主键值10。
+>
+> ②. 由于查询返回的数据是*，所以此时，还需要根据主键值10，到聚集索引中查找10对应的记录，最终找到10对应的行row。
+> ③. 最终拿到这一行的数据，直接返回即可。
+
+聚集索引选取规则：
+
+- 如果存在主键，主键索引就是聚集索引。
+- 如果不存在主键，将使用第一个唯一(UNIQUE)索引作为聚集索引。
+- 如果表没有主键或没有合适的唯一索引，则 InnoDB 会自动生成一个 rowid 作为隐藏的聚集索引。
+
+#### 思考题
+
+1\. 以下 SQL 语句，哪个执行效率高？为什么？
+
+```mysql
+elect * from user where id = 10;
+select * from user where name = 'Arm';
+-- 备注：id为主键，name字段创建的有索引
+```
+
+答：第一条语句，因为第二条需要回表查询，相当于两个步骤。
+
+2\. InnoDB 主键索引的 B+Tree 高度为多少？
+
+答：假设一行数据大小为1k，一页中可以存储16行这样的数据。InnoDB 的指针占用6个字节的空间，主键假设为bigint，占用字节数为8。
+
+可得公式：`n * 8 + (n + 1) * 6 = 16 * 1024`，其中 8 表示 bigint 占用的字节数，n 表示当前节点存储的key的数量，(n + 1) 表示指针数量（比key多一个）。算出n约为1170。  
+
+如果树的高度为2，那么他能存储的数据量大概为：`1171 * 16 = 18736`；
+如果树的高度为3，那么他能存储的数据量大概为：`1171 * 1171 * 16 = 21939856`。  
+
+另外，如果有成千上万的数据，那么就要考虑分表，涉及运维篇知识。  
+
+### 2.3 语法
+
+创建索引：
+`CREATE [ UNIQUE | FULLTEXT ] INDEX index_name ON table_name (index_col_name, ...);`
+如果不加 CREATE 后面不加索引类型参数，则创建的是常规索引  
+
+查看索引：
+`SHOW INDEX FROM table_name;`  
+
+删除索引：
+`DROP INDEX index_name ON table_name;`
+
+```mysql
+-- name字段为姓名字段，该字段的值可能会重复，为该字段创建索引
+CREATE INDEX idx_user_name ON tb_user(name);
+-- phone手机号字段的值非空，且唯一，为该字段创建唯一索引
+CREATE UNIQUE INDEX idx_user_phone ON tb_user (phone);
+-- 为profession, age, status创建联合索引
+CREATE INDEX idx_user_pro_age_stat ON tb_user(profession, age, status);
+-- 为email建立合适的索引来提升查询效率
+CREATE INDEX idx_user_email ON tb_user(email);
+
+-- 删除索引  
+DROP INDEX idx_user_email ON tb_user;  
+```
+
+案例：
+
+```mysql
+create table tb_user(
+    id int primary key auto_increment comment '主键',
+    name varchar(50) not null comment '用户名',
+    phone varchar(11) not null comment '手机号',
+    email varchar(100) comment '邮箱',
+    profession varchar(11) comment '专业',
+    age tinyint unsigned comment '年龄',
+    gender char(1) comment '性别, 1:男, 2:女',
+    status char(1) comment '状态',
+    createtime datetime comment '创建时间'
+) comment '系统用户表';
+
+INSERT INTO tb_user (name, phone, email, profession, age, gender, status, createtime) VALUES ('吕布', '17799990000','lvbu666@163.com', '软件工程', 23, '1', '6', '2001-02-02 00:00:00');
+INSERT INTO tb_user (name, phone, email, profession, age, gender, status, createtime) VALUES ('曹操', '17799990001', 'caocao666@qq.com', '通讯工程', 33, '1', '0', '2001-03-05 00:00:00');
+INSERT INTO tb_user (name, phone, email, profession, age, gender, status, createtime) VALUES ('赵云', '17799990002', '17799990@139.com', '英语', 34, '1', '2', '2002-03-02 00:00:00');
+INSERT INTO tb_user (name, phone, email,profession, age, gender, status, 
+createtime) VALUES ('孙悟空', '17799990003', '17799990@sina.com', '工程造价', 54, '1', '0', '2001-07-02 00:00:00');
+INSERT INTO tb_user (name, phone, email, profession, age, gender, status, createtime) VALUES ('花木兰', '17799990004', '19980729@sina.com', '软件工程', 23, '2', '1', '2001-04-22 00:00:00');
+INSERT INTO tb_user (name, phone, email, profession, age, gender, status, createtime) VALUES ('大乔', '17799990005', 'daqiao666@sina.com', '舞蹈', 22, '2', '0', '2001-02-07 00:00:00');
+INSERT INTO tb_user (name, phone, email, profession, age, gender, status, createtime) VALUES ('露娜', '17799990006', 'luna_love@sina.com', '应用数学', 24, '2', '0', '2001-02-08 00:00:00'); 
+INSERT INTO tb_user (name, phone, email, profession, age, gender, status, createtime) VALUES ('程咬金', '17799990007', 'chengyaojin@163.com', '化工', 38, '1', '5', '2001-05-23 00:00:00');
+INSERT INTO tb_user (name, phone, email, profession, age, gender, status,createtime) VALUES ('项羽', '17799990008','xiaoyu666@qq.com', '金属材料', 43, '1', '0', '2001-09-18 00:00:00');
+INSERT INTO tb_user (name, phone, email, profession, age, gender, status, createtime) VALUES ('白起', '17799990009','baiqi666@sina.com', '机械工程及其自动化', 27, '1', '2', '2001-08-16 00:00:00');
+INSERT INTO tb_user (name, phone, email, profession, age, gender, status, createtime) VALUES ('韩信', '17799990010', 'hanxin520@163.com', '无机非金属材料工程', 27, '1', '0', '2001-06-12 00:00:00');
+INSERT INTO tb_user (name, phone, email, profession, age, gender, status, createtime) VALUES ('荆轲', '17799990011','jingke123@163.com', '会计', 29, '1', '0', '2001-05-11 00:00:00');
+INSERT INTO tb_user (name, phone, email, profession, age, gender, status, createtime) VALUES ('兰陵王', '17799990012','lanlinwang666@126.com', '工程造价', 44, '1', '1', '2001-04-09 00:00:00');
+INSERT INTO tb_user (name, phone, email, profession, age, gender, status, createtime) VALUES ('狂铁', '17799990013','kuangtie@sina.com', '应用数学', 43,'1', '2', '2001-04-10 00:00:00');
+INSERT INTO tb_user (name, phone, email, profession, age, gender, status, createtime) VALUES ('貂蝉', '17799990014','84958948374@qq.com', '软件工程', 40,'2', '3', '2001-02-12 00:00:00');
+INSERT INTO tb_user (name, phone, email, profession, age, gender, status,createtime) VALUES ('妲己','17799990015','2783238293@qq.com', '软件工程', 31,'2', '0', '2001-01-30 00:00:00');
+INSERT INTO tb_user (name, phone, email, profession, age, gender, status,createtime) VALUES ('芈月', '17799990016','xiaomin2001@sina.com', '工业经济', 35, '2', '0', '2000-05-03 00:00:00');
+INSERT INTO tb_user (name, phone, email, profession, age, gender, status, createtime) VALUES ('嬴政', '17799990017','8839434342@qq.com', '化工', 38, '1','1', '2001-08-08 00:00:00');
+INSERT INTO tb_user (name, phone, email, profession, age, gender, status,createtime) VALUES ('狄仁杰', '17799990018','jujiamlm8166@163.com', '国际贸易',30, '1', '0', '2007-03-12 00:00:00');
+INSERT INTO tb_user (name, phone, email, profession, age, gender, status, createtime) VALUES ('安琪拉', '17799990019','jdodm1h@126.com', '城市规划', 51,'2', '0', '2001-08-15 00:00:00');
+INSERT INTO tb_user (name, phone, email, profession, age, gender, status, createtime) VALUES ('典韦', '17799990020','ycaunanjian@163.com', '城市规划', 52, '1', '2', '2000-04-12 00:00:00');
+INSERT INTO tb_user (name, phone, email, profession, age, gender, status, createtime) VALUES ('廉颇', '17799990021','lianpo321@126.com', '土木工程', 19,'1', '3', '2002-07-18 00:00:00');
+INSERT INTO tb_user (name, phone, email, profession, age, gender, status, createtime) VALUES ('后羿', '17799990022','altycj2000@139.com', '城市园林', 20,'1', '0', '2002-03-10 00:00:00');
+INSERT INTO tb_user (name, phone, email, profession, age, gender, status, createtime) VALUES ('姜子牙', '17799990023','37483844@qq.com', '工程造价', 29,'1', '4', '2003-05-26 00:00:00');
+```
+
+需求：
+
+```mysql
+A. name字段为姓名字段，该字段的值可能会重复，为该字段创建索引。
+CREATE INDEX idx_user_name ON tb_user(name);
+
+B. phone手机号字段的值，是非空，且唯一的，为该字段创建唯一索引。
+CREATE UNIQUE INDEX idx_user_phone ON tb_user(phone);
+
+C. 为profession、age、status创建联合索引。
+CREATE INDEX idx_user_pro_age_sta ON tb_user(profession,age,status);
+
+D. 为email建立合适的索引来提升查询效率。
+CREATE INDEX idx_email ON tb_user(email);
+
+查看tb_user表的所有的索引数据。
+show index from tb_user;
+```
+
+
+
+### 2.4 使用规则
+
+#### 最左前缀法则
+
+如果索引关联了多列（联合索引），要遵守最左前缀法则，最左前缀法则指的是查询从索引的最左列开始，并且不跳过索引中的列。
+如果跳跃某一列，索引将部分失效（后面的字段索引失效）。跳过的话，后面的排序就无从说起了。最左前缀法则在用select的时候，和放的位置是没有关系的，只要存在就行。  
+
+联合索引中，出现范围查询（<, >），范围查询右侧的列索引失效。可以用>=或者<=来规避索引失效问题。  
+
+#### 索引失效情况
+
+1. 在索引列上进行运算操作，索引将失效。如：`explain select * from tb_user where substring(phone, 10, 2) = '15';` 换成 `explain select * from tb_user where phone = '17799990015';`这是可以的。  
+2. 字符串类型字段使用时，不加引号，索引将失效。如：`explain select * from tb_user where phone = 17799990015;`，此处phone的值没有加引号  
+3. 模糊查询中，如果仅仅是尾部模糊匹配，索引不会是失效；如果是头部模糊匹配，索引失效。如：`explain select * from tb_user where profession like '%工程';`，前后都有 % 也会失效。`explain select * from tb_user where profession like '软件%';` 这个是不会失效的，只有前面加了%才会失效。  
+4. 用 or 分割开的条件，如果 or 其中一个条件的列没有索引，那么涉及的索引都不会被用到。
+5. 如果 MySQL 评估使用索引比全表更慢，则不使用索引。因为只要有一个没有索引，另外一个用不用索引都没有意义，都要进行全表扫描。所以就无需用索引。
+
+#### SQL 提示
+
+优化数据库的一个重要手段，就是在SQL语句中加入一些人为的提示来达到优化操作的目的。  
+
+例如，使用索引：
+`explain select * from tb_user use index(idx_user_pro) where profession="软件工程";`
+不使用哪个索引：
+`explain select * from tb_user ignore index(idx_user_pro) where profession="软件工程";`
+必须使用哪个索引：
+`explain select * from tb_user force index(idx_user_pro) where profession="软件工程";`
+
+use 是建议，实际使用哪个索引 MySQL 还会自己权衡运行速度去更改，force就是无论如何都强制使用该索引。
+
+#### 覆盖索引&回表查询
+
+尽量使用覆盖索引（查询使用了索引，并且需要返回的列，在该索引中已经全部能找到），减少 select *。
+
+explain 中 extra 字段含义：
+`using index condition`：查找使用了索引，但是需要回表查询数据
+`using where; using index;`：查找使用了索引，但是需要的数据都在索引列中能找到，所以不需要回表查询
+
+- 覆盖索引：
+
+  - 如果在生成的二级索引（辅助索引）中可以一次性获得select所需要的字段，不需要回表查询。
+
+  - 如果在聚集索引中直接能找到对应的行，则直接返回行数据，只需要一次查询，哪怕是select \*；
+  - 如果在辅助索引（二级索引）中找聚集索引，如`select id, name from xxx where name='xxx';`，也只需要通过辅助索引(name)查找到对应的id，返回name和name索引对应的id即可，只需要一次查询； 
+  - 如果是通过辅助索引查找其他字段，则需要回表查询，如`select id, name, gender from xxx where name='xxx';`  
+
+所以尽量不要用`select *`，容易出现回表查询，降低效率，除非有联合索引包含了所有字段  
+
+面试题：
+
+一张表，有四个字段（id, username, password,status），由于数据量大，需要对以下SQL语句进行优化，该如何进行才是最优方案：
+`select id, username, password from tb_user where username='coisini';`
+
+解：
+
+给username和password字段建立联合索引，则不需要回表查询，直接覆盖索引。username和password字段建立联合索引的叶子节点挂的就是 id 所以不需要三者同时建索引。
+
+#### 前缀索引
+
+当字段类型为字符串（varchar, text等）时，有时候需要索引很长的字符串，这会让索引变得很大，查询时，浪费大量的磁盘IO，影响查询效率，此时可以只降字符串的一部分前缀，建立索引，这样可以大大节约索引空间，从而提高索引效率。
+
+语法：
+
+```mysql
+create index idx_xxxx on table_name(columnn(n));
+```
+
+> 例如：为tb_user表的email字段，建立长度为5的前缀索引。
+>
+> create index idx_email_5 on tb_user(email(5));
+
+前缀长度：可以根据索引的选择性来决定，而选择性是指不重复的索引值（基数）和数据表的记录总数的比值，索引选择性越高则查询效率越高，唯一索引的选择性是1，这是最好的索引选择性，性能也是最好的。  
+
+求选择性公式：  
+
+```mysql
+select count(distinct email) / count(*) from tb_user;
+select count(distinct substring(email, 1, 5)) / count(*) from tb_user;
+```
+
+前缀索引中是有可能碰到相同的索引的情况的（因为选择性可能不为1），所以使用前缀索引进行查询的时候，mysql 会有一个回表查询的过程，确定是否为所需数据。如图中的查询到lvbu6之后还要进行回表，回表完再查xiaoy，看到xiaoy是不需要的数据，则停止查下一个。
+
+![前缀索引](http://cdn.coisini.cn/axz/image-20241006204752506.png)
+
+#### 单列索引&联合索引
+
+> 单列索引：即一个索引只包含单个列
+> 联合索引：即一个索引包含了多个列
+
+在业务场景中，如果存在多个查询条件，考虑针对于查询字段建立索引时，建议建立联合索引，而非单列索引。
+
+单列索引情况：
+
+```mysql
+explain select id, phone, name from tb_user where phone = '17799990010' and name = '韩信';
+```
+
+phone 和 name 都建立了索引情况下，这句只会用到phone索引字段。
+
+![单列索引](http://cdn.coisini.cn/axz/image-20241006205204308.png)
+
+##### 注
+
+- 多条件联合查询时，MySQL优化器会评估哪个字段的索引效率更高，会选择该索引完成本次查询。
+
+### 2.5 设计原则
+
+1. 针对于数据量较大，且查询比较频繁的表建立索引。
+2. 针对于常作为查询条件（where）、排序（order by）、分组（group by）操作的字段建立索引。
+3. 尽量选择区分度高的列作为索引，尽量建立唯一索引，区分度越高，使用索引的效率越高。
+4. 如果是字符串类型的字段，字段长度较长，可以针对于字段的特点，建立前缀索引。
+5. 尽量使用联合索引，减少单列索引，查询时，联合索引很多时候可以覆盖索引，节省存储空间，避免回表，提高查询效率。
+6. 要控制索引的数量，索引并不是多多益善，索引越多，维护索引结构的代价就越大，会影响增删改的效率。
+7. 如果索引列不能存储NULL值，请在创建表时使用NOT NULL约束它。当优化器知道每列是否包含NULL值时，它可以更好地确定哪个索引最有效地用于查询。
